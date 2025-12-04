@@ -1,12 +1,11 @@
 /**
  * 4.4 使用向量存储示例
  * 演示如何使用 Faiss 向量数据库来保存和检索文档
+ * 本示例使用本地 HuggingFace Transformers 嵌入模型（不依赖在线 API）
  */
-import { ChatOpenAI } from "@langchain/openai";
-import { OpenAIEmbeddings } from "@langchain/openai";
+import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/hf_transformers";
 import { FaissStore } from "@langchain/community/vectorstores/faiss";
-import { Document } from "@langchain/core/documents";
-import { chineseFoodData, convertToTextDocuments } from "../data/chinese-food-data.js";
+import { convertToTextDocuments } from "../data/chinese-food-data.js";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -20,19 +19,17 @@ async function example4() {
   console.log("=== 示例 4.4: 使用向量存储（Faiss）===\n");
 
   try {
-    // 检查 API Key
-    if (!process.env.OPENAI_API_KEY) {
-      console.error("❌ 请设置 OPENAI_API_KEY 环境变量");
-      return;
-    }
-
     // 1. 获取嵌入模型（用于将文本转换为向量）
-    // 使用环境变量配置模型名称，默认为兼容性更好的模型
-    const embeddings = new OpenAIEmbeddings({
-      model: process.env.OPENAI_EMBEDDING_MODEL
+    // 这里使用本地 HuggingFace Transformers 模型（基于 @xenova/transformers）
+    const hfEmbeddingModel =
+      process.env.HF_EMBEDDING_MODEL || "Xenova/all-MiniLM-L6-v2";
+
+    const embeddings = new HuggingFaceTransformersEmbeddings({
+      model: hfEmbeddingModel,
     });
 
-    console.log("✅ 嵌入模型已创建");
+    console.log("✅ HuggingFace 嵌入模型已创建");
+    console.log(`📋 使用模型: ${hfEmbeddingModel}`);
     console.log("📋 用途: 将文本转换为向量（数字数组）\n");
 
     // 2. 准备文档数据

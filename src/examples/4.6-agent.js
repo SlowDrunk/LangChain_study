@@ -2,11 +2,13 @@
  * 4.6 使用Agent示例
  * 演示如何使用 Agent 来智能选择工具完成任务
  * 使用 Faiss 作为向量存储
+ * 本示例中：大模型使用 OpenAI Chat 模型，嵌入模型使用本地 HuggingFace Transformers
+ * 说明：Agent 相关的 API 使用兼容包 @langchain/classic
  */
 import { ChatOpenAI } from "@langchain/openai";
-import { OpenAIEmbeddings } from "@langchain/openai";
+import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/hf_transformers";
 import { FaissStore } from "@langchain/community/vectorstores/faiss";
-import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
+import { AgentExecutor, createToolCallingAgent } from "@langchain/classic/agents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { z } from "zod";
@@ -47,15 +49,13 @@ async function example6() {
     // 2. 创建或加载 Faiss 向量存储（用于工具1）
     const faissIndexPath = path.join(__dirname, "../../faiss_index_agent");
     let vectorStore;
-    
-    const embeddingModelName = process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-ada-002";
-    
-    const embeddings = new OpenAIEmbeddings({
-      openAIApiKey: process.env.OPENAI_API_KEY,
-      modelName: embeddingModelName,
-      configuration: process.env.OPENAI_BASE_URL ? {
-        baseURL: process.env.OPENAI_BASE_URL
-      } : undefined
+
+    // 使用本地 HuggingFace Transformers 作为嵌入模型（无需 API Key）
+    const hfEmbeddingModel =
+      process.env.HF_EMBEDDING_MODEL || "Xenova/all-MiniLM-L6-v2";
+
+    const embeddings = new HuggingFaceTransformersEmbeddings({
+      model: hfEmbeddingModel,
     });
 
     // 检查是否已有保存的索引
@@ -142,15 +142,12 @@ async function example6() {
     // 4. 创建 Agent 提示词模板
     const prompt = ChatPromptTemplate.fromMessages([
       ["system", `你是一个智能的中国美食助手。你可以使用以下工具来帮助用户：
-
-可用工具：
-{tools}
-
-工具使用说明：
-- 使用 search_province_food 来查询特定省份的美食（从 Faiss 向量数据库检索）
-- 使用 compare_provinces_food 来比较两个省份的美食（从 Faiss 向量数据库检索）
-- 使用 list_provinces 来获取所有支持的省份列表
-
+      
+可用工具（说明性文字，模型会自动看到可用工具的名称和描述）：
+- search_province_food: 查询特定省份的美食（从 Faiss 向量数据库检索）
+- compare_provinces_food: 比较两个省份的美食（从 Faiss 向量数据库检索）
+- list_provinces: 获取所有支持的省份列表
+      
 请根据用户的问题，智能地选择合适的工具来完成任务。如果用户的问题需要多个步骤，可以使用多个工具。`],
       ["placeholder", "{chat_history}"],
       ["human", "{input}"],

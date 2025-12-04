@@ -3,9 +3,10 @@
  * 演示如何使用 RAG (Retrieval-Augmented Generation) 检索增强生成
  * 使用 Faiss 作为向量存储
  * RAG = 向量存储检索 + 大模型生成
+ * 本示例中：大模型仍使用 OpenAI Chat 模型，嵌入模型改为本地 HuggingFace Transformers
  */
 import { ChatOpenAI } from "@langchain/openai";
-import { OpenAIEmbeddings } from "@langchain/openai";
+import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/hf_transformers";
 import { FaissStore } from "@langchain/community/vectorstores/faiss";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { convertToTextDocuments } from "../data/chinese-food-data.js";
@@ -23,7 +24,7 @@ async function example5() {
   console.log("=== 示例 4.5: RAG检索生成（使用 Faiss）===\n");
 
   try {
-    // 检查 API Key
+    // 检查 OpenAI API Key（用于 Chat 模型）
     if (!process.env.OPENAI_API_KEY) {
       console.error("❌ 请设置 OPENAI_API_KEY 环境变量");
       return;
@@ -40,15 +41,12 @@ async function example5() {
       model.baseURL = process.env.OPENAI_BASE_URL;
     }
 
-    // 2. 获取嵌入模型
-    const embeddingModelName = process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-ada-002";
-    
-    const embeddings = new OpenAIEmbeddings({
-      openAIApiKey: process.env.OPENAI_API_KEY,
-      modelName: embeddingModelName,
-      configuration: process.env.OPENAI_BASE_URL ? {
-        baseURL: process.env.OPENAI_BASE_URL
-      } : undefined
+    // 2. 获取嵌入模型（使用本地 HuggingFace Transformers）
+    const hfEmbeddingModel =
+      process.env.HF_EMBEDDING_MODEL || "Xenova/all-MiniLM-L6-v2";
+
+    const embeddings = new HuggingFaceTransformersEmbeddings({
+      model: hfEmbeddingModel,
     });
 
     // 3. 创建或加载 Faiss 向量存储
