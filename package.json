@@ -24,6 +24,7 @@
     "dotenv": "^16.4.5",
     "faiss-node": "^0.5.1",
     "langchain": "^1.1.1",
+    "undici": "^7.16.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {

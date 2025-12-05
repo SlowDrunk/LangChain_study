@@ -5,6 +5,7 @@
  * RAG = 向量存储检索 + 大模型生成
  * 本示例中：大模型仍使用 OpenAI Chat 模型，嵌入模型改为本地 HuggingFace Transformers
  */
+import "../utils/polyfill-stream.js";
 import { ChatOpenAI } from "@langchain/openai";
 import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/hf_transformers";
 import { FaissStore } from "@langchain/community/vectorstores/faiss";
@@ -66,6 +67,9 @@ async function example5() {
         documents,
         embeddings
       );
+
+      console.log(embeddings,'=================>存储文本的emdeddings')
+
 
       console.log(`✅ Faiss 向量存储已创建，包含 ${documents.length} 条文档\n`);
       

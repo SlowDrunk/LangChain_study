@@ -5,6 +5,7 @@
  * 本示例中：大模型使用 OpenAI Chat 模型，嵌入模型使用本地 HuggingFace Transformers
  * 说明：Agent 相关的 API 使用兼容包 @langchain/classic
  */
+import "../utils/polyfill-stream.js";
 import { ChatOpenAI } from "@langchain/openai";
 import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/hf_transformers";
 import { FaissStore } from "@langchain/community/vectorstores/faiss";

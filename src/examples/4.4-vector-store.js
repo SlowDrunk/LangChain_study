@@ -3,6 +3,7 @@
  * 演示如何使用 Faiss 向量数据库来保存和检索文档
  * 本示例使用本地 HuggingFace Transformers 嵌入模型（不依赖在线 API）
  */
+import "../utils/polyfill-stream.js";
 import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/hf_transformers";
 import { FaissStore } from "@langchain/community/vectorstores/faiss";
 import { convertToTextDocuments } from "../data/chinese-food-data.js";
@@ -56,6 +57,7 @@ async function example4() {
     );
 
     console.log("✅ Faiss 向量存储已创建");
+    console.log(embeddings,'=================>存储文本的emdeddings')
     console.log(`📊 已存储 ${documents.length} 条文档的向量表示\n`);
 
     // 保存向量存储到磁盘（可选，用于持久化）
