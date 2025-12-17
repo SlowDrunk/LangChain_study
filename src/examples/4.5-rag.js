@@ -70,7 +70,6 @@ async function example5() {
 
       console.log(embeddings,'=================>存储文本的emdeddings')
 
-
       console.log(`✅ Faiss 向量存储已创建，包含 ${documents.length} 条文档\n`);
       
       // 保存向量存储到磁盘

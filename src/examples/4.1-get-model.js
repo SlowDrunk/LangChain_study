@@ -34,12 +34,12 @@ async function example1() {
     console.log(`📋 模型名称: ${process.env.OPENAI_MODEL_NAME || "gpt-3.5-turbo"}\n`);
 
     // 使用模型进行简单对话
-    console.log("💬 提问: 请介绍一下四川省的特色美食\n");
+    console.log("💬 提问: 请介绍一下陕西省的特色美食\n");
 
     const response = await model.invoke([
       {
         role: "user",
-        content: "请介绍一下四川省的特色美食"
+        content: "请介绍一下陕西省的特色美食"
       }
     ]);
 
