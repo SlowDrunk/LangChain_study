@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LangChain 流式聊天演示</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 800px;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    label {
+      font-weight: 600;
+      color: #555;
+      font-size: 14px;
+    }
+
+    input,
+    textarea {
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.3s;
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .response-container {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 200px;
+      max-height: 500px;
+      overflow-y: auto;
+      border: 2px solid #e0e0e0;
+    }
+
+    .response-content {
+      color: #333;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 15px;
+    }
+
+    .response-content:empty::before {
+      content: "等待响应...";
+      color: #999;
+      font-style: italic;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      color: #667eea;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .loading.active {
+      display: block;
+    }
+
+    .loading::after {
+      content: "...";
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+
+      0%,
+      20% {
+        content: ".";
+      }
+
+      40% {
+        content: "..";
+      }
+
+      60%,
+      100% {
+        content: "...";
+      }
+    }
+
+    .error {
+      background: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #fcc;
+      display: none;
+      margin-top: 10px;
+    }
+
+    .error.active {
+      display: block;
+    }
+
+    .status {
+      text-align: center;
+      font-size: 12px;
+      color: #999;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>LangChain 流式聊天演示</h1>
+    <p class="subtitle">使用 Fetch API 调用 Koa 后端，实时展示流式响应</p>
+
+    <div class="input-group">
+      <label for="systemMessage">系统消息 (System Message):</label>
+      <textarea id="systemMessage" placeholder="我是一个人工智能助手，我的名字叫贾维斯">我是一个人工智能助手，我的名字叫贾维斯</textarea>
+    </div>
+
+    <div class="input-group">
+      <label for="userMessage">用户消息 (User Message):</label>
+      <input type="text" id="userMessage" placeholder="请输入你的问题..." value="请简单介绍一下你自己！" />
+    </div>
+
+    <button id="sendBtn" onclick="sendMessage()">发送消息</button>
+
+    <div class="error" id="errorMsg"></div>
+
+    <div class="response-container">
+      <div class="response-content" id="responseContent"></div>
+    </div>
+
+    <div class="loading" id="loading">正在接收响应</div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000/api/chat';
+
+    // DOM 操作
+    const DOM = {
+      systemMessage: () => document.getElementById('systemMessage'),
+      userMessage: () => document.getElementById('userMessage'),
+      responseContent: () => document.getElementById('responseContent'),
+      loading: () => document.getElementById('loading'),
+      errorMsg: () => document.getElementById('errorMsg'),
+      sendBtn: () => document.getElementById('sendBtn'),
+      status: () => document.getElementById('status'),
+    };
+
+    const UI = {
+      reset() {
+        DOM.responseContent().textContent = '';
+        DOM.errorMsg().classList.remove('active');
+        DOM.loading().classList.add('active');
+        DOM.sendBtn().disabled = true;
+        DOM.status().textContent = '';
+      },
+
+      appendContent(content) {
+        DOM.responseContent().textContent += content || '';
+        const container = DOM.responseContent().parentElement;
+        container.scrollTop = container.scrollHeight;
+      },
+
+      showLoading() {
+        DOM.loading().classList.add('active');
+      },
+
+      hideLoading() {
+        DOM.loading().classList.remove('active');
+      },
+
+      showError(message) {
+        DOM.errorMsg().textContent = message;
+        DOM.errorMsg().classList.add('active');
+      },
+
+      setStatus(text) {
+        DOM.status().textContent = text;
+      },
+
+      enableButton() {
+        DOM.sendBtn().disabled = false;
+      },
+    };
+
+    // API 请求
+    async function fetchStream(systemMessage, userMessage, callbacks) {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemMessage: systemMessage || '我是一个人工智能助手，我的名字叫贾维斯',
+          message: userMessage,
+        }),
+      });
+
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType?.includes('text/event-stream')) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          const { value } = await reader.read();
+          if (value) {
+            const errorBuffer = decoder.decode(value, { stream: true });
+            const errorMatch = errorBuffer.match(/data: ({[^}]*})/);
+            if (errorMatch) {
+              const errorData = JSON.parse(errorMatch[1]);
+              throw new Error(errorData.error || `HTTP 错误: ${response.status}`);
+            }
+          }
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP 错误: ${response.status}`);
+        }
+      }
+
+      if (!response.body) {
+        throw new Error('响应体为空');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          callbacks.onComplete?.();
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split('\n\n');
+        buffer = events.pop() || '';
+
+        for (const event of events) {
+          if (!event.trim()) continue;
+          const lines = event.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const jsonStr = line.slice(6).trim();
+                if (!jsonStr) continue;
+                const data = JSON.parse(jsonStr);
+
+                if (data.done) {
+                  callbacks.onComplete?.();
+                  continue;
+                }
+
+                if (data.error) {
+                  callbacks.onError?.(data.error);
+                  break;
+                }
+
+                if (data.content !== undefined) {
+                  callbacks.onContent?.(data.content);
+                }
+              } catch (e) {
+                continue;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 主函数
+    async function sendMessage() {
+      const systemMessage = DOM.systemMessage().value.trim();
+      const userMessage = DOM.userMessage().value.trim();
+
+      if (!userMessage) {
+        UI.showError('请输入用户消息');
+        return;
+      }
+
+      UI.reset();
+
+      try {
+        await fetchStream(systemMessage, userMessage, {
+          onContent: (content) => UI.appendContent(content),
+          onComplete: () => {
+            UI.hideLoading();
+            UI.setStatus('✅ 响应完成');
+          },
+          onError: (error) => {
+            UI.showError(`服务器错误: ${error}`);
+            UI.hideLoading();
+            UI.setStatus('❌ 请求失败');
+          },
+        });
+      } catch (error) {
+        UI.showError(`错误: ${error.message}`);
+        UI.hideLoading();
+        UI.setStatus('❌ 请求失败');
+      } finally {
+        UI.enableButton();
+      }
+    }
+
+    DOM.userMessage().addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+
+</html>
